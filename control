@@ -1,0 +1,9 @@
+Package: me.conorthedev.dismisser
+Name: Dismisser
+Version: 1.0
+Architecture: iphoneos-arm
+Description: Dismiss your alerts by tapping behind them!
+Maintainer: ConorTheDev
+Author: ConorTheDev
+Section: Tweaks
+Depends: mobilesubstrate, preferenceloader

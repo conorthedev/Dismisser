@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>Dismisser</string>
+	<key>subtitle</key>
+	<string>Version 1.0</string>
+	<key>headerColor</key>
+	<string>#b24592</string>
+	<key>darkHeaderColor</key>
+	<string>#b24592</string>
+	<key>textColor</key>
+	<string>#ffffff</string>
+	<key>darkTextColor</key>
+	<string>#ffffff</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Configuration</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>me.conorthedev.dismisser.prefs</string>
+			<key>key</key>
+			<string>enabled</string>
+			<key>label</key>
+			<string>Enabled</string>
+			<key>PostNotification</key>
+			<string>me.conorthedev.dismisser.prefs/ReloadPrefs</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>me.conorthedev.dismisser.prefs</string>
+			<key>key</key>
+			<string>removeCancel</string>
+			<key>label</key>
+			<string>Remove cancel buttons</string>
+			<key>PostNotification</key>
+			<string>me.conorthedev.dismisser.prefs/ReloadPrefs</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Other</string>
+		</dict>
+		<dict>
+			<key>cell</key> 					
+			<string>PSButtonCell</string>
+			<key>action</key> 					
+			<string>code</string>
+			<key>label</key> 					
+			<string>View source code</string>
+			<key>icon</key>
+			<string>/Library/PreferenceBundles/DismisserPrefs.bundle/icons/source.png</string>
+		</dict>
+		<dict>
+			<key>cell</key> 					
+			<string>PSButtonCell</string>
+			<key>action</key> 					
+			<string>bug</string>
+			<key>label</key> 					
+			<string>Report a Bug</string>
+			<key>icon</key>
+			<string>/Library/PreferenceBundles/DismisserPrefs.bundle/icons/bug.png</string>
+		</dict>
+		<dict>
+			<key>cell</key> 					
+			<string>PSGroupCell</string>
+			<key>footerText</key> 				
+			<string>Made with ❤️ by ConorTheDev</string>
+			<key>footerAlignment</key> 			
+			<string>1</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>DismisserPrefs</string>
+</dict>
+</plist>
