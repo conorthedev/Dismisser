@@ -1,6 +1,7 @@
 #import "Dismisser.h"
 
 NSDictionary *dismisser_prefs;
+NSMutableArray *removedActions;
 BOOL dismisser_enabled;
 BOOL dismisser_removeCancelButtons;
 
@@ -29,6 +30,7 @@ BOOL dismisser_removeCancelButtons;
 	if(dismisser_removeCancelButtons) {
 		if(arg1.style != 1 && ![arg1.title isEqualToString:@"Close"] && ![arg1.title isEqualToString:@"Cancel"]) {
 			%orig;
+			[removedActions addObject:arg1];
 		}
 	} else {
 		%orig;
@@ -60,6 +62,12 @@ BOOL dismisser_removeCancelButtons;
 
 %new
 -(void)dismisser_handleUITap:(id)sender {
+	for(UIAlertAction *action in removedActions) {
+		if(action.handler) {
+			dispatch_async(dispatch_get_main_queue(), action.handler);
+		}
+	}
+	removedActions = [NSMutableArray new];
 	[self dismissViewControllerAnimated:YES completion:nil];
 }
 %end
@@ -87,6 +95,8 @@ static void DismisserReloadPrefs() {
 }
 
 %ctor {
+	removedActions = [NSMutableArray new];
+
 	DismisserReloadPrefs();
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)DismisserReloadPrefs, kSettingsChangedNotification, NULL, CFNotificationSuspensionBehaviorCoalesce);
 }
