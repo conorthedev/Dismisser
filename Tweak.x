@@ -1,36 +1,23 @@
 #import "Dismisser.h"
 
-NSDictionary *dismisser_prefs;
-NSMutableArray *removedActions;
-BOOL dismisser_enabled;
-BOOL dismisser_removeCancelButtons;
+NSDictionary *dismisserPrefs;
+BOOL dismisserEnabled;
+BOOL dismisserRemoveCancel;
 
-%hook _SBAlertController
--(void)viewDidAppear:(bool)animated {
-	%orig;
-	if(dismisser_enabled) {
-		UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismisser_handleTap:)];
-		[self.view.superview addGestureRecognizer:tapGesture];
-	}
-}
-
-%new
--(void)dismisser_handleTap:(id)sender {
-	[self.alertItem dismiss];
-}
-%end
-
+%group Alerts
 %hook UIAlertController
+%property (nonatomic, strong) UIAlertAction *dismisserCancelAction;
+
 -(void)addAction:(UIAlertAction*)arg1 {
-	if(!dismisser_enabled || self.preferredStyle != 1) {
+	if(!dismisserEnabled || self.preferredStyle != 1) {
 		%orig;
 		return;
 	} 
 	
-	if(dismisser_removeCancelButtons) {
-		if(arg1.style != 1 && ![arg1.title isEqualToString:@"Close"] && ![arg1.title isEqualToString:@"Cancel"]) {
+	if(arg1.style == UIAlertActionStyleCancel) {
+		self.dismisserCancelAction = arg1;
+		if(!dismisserRemoveCancel) {
 			%orig;
-			[removedActions addObject:arg1];
 		}
 	} else {
 		%orig;
@@ -38,38 +25,61 @@ BOOL dismisser_removeCancelButtons;
 }
 
 -(void)setPreferredAction:(UIAlertAction *)arg1 {
-	if(!dismisser_enabled || self.preferredStyle != 1) {
+	if(!dismisserEnabled || self.preferredStyle != 1) {
 		%orig;
 		return;
-	}
+	} 
 	
-	if(dismisser_removeCancelButtons) {
-		if(arg1.style != 1 && ![arg1.title isEqualToString:@"Close"] && ![arg1.title isEqualToString:@"Cancel"]) {
-			%orig;
-		}
-	} else {
+	if(arg1.style != UIAlertActionStyleCancel) {
 		%orig;
 	}
 }
 
 -(void)viewDidAppear:(bool)animated {
 	%orig;
-	if(dismisser_enabled) {
-		UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismisser_handleUITap:)];
+	if(dismisserEnabled) {
+		UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismisser_handleTap)];
 		[self.view.superview addGestureRecognizer:tapGesture];
 	}
 }
 
 %new
--(void)dismisser_handleUITap:(id)sender {
-	for(UIAlertAction *action in removedActions) {
-		if(action.handler) {
-			dispatch_async(dispatch_get_main_queue(), action.handler);
-		}
-	}
-	removedActions = [NSMutableArray new];
-	[self dismissViewControllerAnimated:YES completion:nil];
+-(void)dismisser_handleTap {
+	[self _dismissWithAction:self.dismisserCancelAction];	
 }
+%end
+%end
+
+%group ZebraFix
+%hook ZBSourceListTableViewController
+- (void)textDidChange:(NSNotification *)notification {
+	if(!dismisserEnabled || !dismisserRemoveCancel) {
+		%orig;
+		return;
+	}
+
+    UIAlertController *alertController = (UIAlertController *)self.presentedViewController;
+    UITextField *textField = alertController.textFields.firstObject;
+    UIAlertAction *add = alertController.actions[0];
+
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(http(s)?://){2}" options:NSRegularExpressionCaseInsensitive
+    error:nil];
+    NSTextCheckingResult *match = [regex firstMatchInString:textField.text options:0 range:NSMakeRange(0, textField.text.length)];
+    if (match) {
+        if ([textField.text hasPrefix:@"https"]) {
+            textField.text = [textField.text substringFromIndex:8];
+        } else {
+            textField.text = [textField.text substringFromIndex:7];
+        }
+    }
+    
+    regex = [NSRegularExpression regularExpressionWithPattern:@"(http(s)?://){1}((\\w)|([0-9])|([-|_]))+(\\.|/)+((\\w)|([0-9])|([-|_]))+" options:NSRegularExpressionCaseInsensitive
+    error:nil];
+    NSTextCheckingResult *isURL = [regex firstMatchInString:textField.text options:0 range:NSMakeRange(0, textField.text.length)];
+    
+    [add setEnabled:isURL];
+}
+%end
 %end
 
 static void DismisserReloadPrefs() {
@@ -79,24 +89,25 @@ static void DismisserReloadPrefs() {
         CFArrayRef keyList = CFPreferencesCopyKeyList((CFStringRef)kIdentifier, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
 
         if (keyList) {
-            dismisser_prefs = (NSDictionary *)CFBridgingRelease(CFPreferencesCopyMultiple(keyList, (CFStringRef)kIdentifier, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
+            dismisserPrefs = (NSDictionary *)CFBridgingRelease(CFPreferencesCopyMultiple(keyList, (CFStringRef)kIdentifier, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
 
-            if (!dismisser_prefs) {
-                dismisser_prefs = [NSDictionary new];
+            if (!dismisserPrefs) {
+                dismisserPrefs = [NSDictionary new];
             }
             CFRelease(keyList);
         }
     } else {
-        dismisser_prefs = [NSDictionary dictionaryWithContentsOfFile:kSettingsPath];
+        dismisserPrefs = [NSDictionary dictionaryWithContentsOfFile:kSettingsPath];
     }
 	
-	dismisser_enabled = [dismisser_prefs objectForKey:@"enabled"] ? [[dismisser_prefs valueForKey:@"enabled"] boolValue] : YES;
-	dismisser_removeCancelButtons = [dismisser_prefs objectForKey:@"removeCancel"] ? [[dismisser_prefs valueForKey:@"removeCancel"] boolValue] : YES;
+	dismisserEnabled = [dismisserPrefs objectForKey:@"enabled"] ? [[dismisserPrefs valueForKey:@"enabled"] boolValue] : YES;
+	dismisserRemoveCancel = [dismisserPrefs objectForKey:@"removeCancel"] ? [[dismisserPrefs valueForKey:@"removeCancel"] boolValue] : YES;
 }
 
 %ctor {
-	removedActions = [NSMutableArray new];
-
 	DismisserReloadPrefs();
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)DismisserReloadPrefs, kSettingsChangedNotification, NULL, CFNotificationSuspensionBehaviorCoalesce);
+
+	%init(Alerts);
+	%init(ZebraFix);
 }
